@@ -1,0 +1,33 @@
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Brand } from '../../components/Brand';
+import { GroupCard } from '../../components/GroupCard';
+import { useAuth } from '../../lib/auth';
+import { supabase } from '../../lib/supabase';
+import { confirmDestructive, showNotice } from '../../lib/confirm';
+import { colors } from '../../lib/theme';
+import type { Group } from '../../lib/types';
+
+export default function GroupsScreen() {
+  const { width: screenWidth } = useWindowDimensions();
+  const [contentWidth, setContentWidth] = useState(screenWidth);
+  const router = useRouter(); const { session } = useAuth(); const [groups, setGroups] = useState<Group[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const load = useCallback(async () => { if (!supabase || !session) return; setLoading(true); const { data, error: queryError } = await supabase.from('groups').select('id,owner_id,name,description,topic,created_at,image_path,profiles!groups_owner_id_fkey(id,full_name,username,avatar_url),group_members(profile_id)').order('created_at', { ascending: false }).limit(60); if (queryError) setError(queryError.message); else { setError(''); setGroups((data || []) as unknown as Group[]); } setLoading(false); }, [session]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
+  async function toggle(group: Group) { if (!supabase || !session) return; const joined = group.group_members?.some(row => row.profile_id === session.user.id); const query = joined ? supabase.from('group_members').delete().eq('group_id', group.id).eq('profile_id', session.user.id) : supabase.from('group_members').insert({ group_id: group.id, profile_id: session.user.id }); const { error: mutationError } = await query; if (mutationError) setError(mutationError.message); else void load(); }
+  function deleteGroup(group: Group) {
+    if (!supabase || !session || group.owner_id !== session.user.id) return;
+    confirmDestructive('Csoport törlése', `Biztosan törlöd a „${group.name}” csoportot? A taglista megszűnik, a csoport projektjei megmaradnak a közösségi hírfolyamban.`, async () => {
+      const { error: deleteError } = await supabase!.from('groups').delete().eq('id', group.id).eq('owner_id', session.user.id);
+      if (deleteError) showNotice('Nem sikerült törölni', deleteError.message);
+      else setGroups(current => current.filter(item => item.id !== group.id));
+    });
+  }
+  const layoutWidth = Math.min(contentWidth, 1240);
+  const columns = layoutWidth >= 680 ? 2 : 1;
+  const groupWidth = (layoutWidth - 40 - (columns - 1) * 14) / columns;
+  return <SafeAreaView onLayout={event => setContentWidth(event.nativeEvent.layout.width)} style={s.safe} edges={['top', 'left', 'right']}><View style={[s.header, Platform.OS === 'web' && screenWidth >= 1024 && s.desktopHidden]}><Brand /><Pressable style={s.create} onPress={() => router.push('/create-group')}><Text style={s.createText}>＋ Új csoport</Text></Pressable></View><View style={s.title}><View style={s.titleText}><Text style={s.eyebrow}>TALÁLJ TÁRSAKAT</Text><Text style={s.heading}>Csoportok</Text><Text style={s.sub}>Gyűljetek össze az ötletek köré.</Text></View><Pressable style={[s.create, !(Platform.OS === 'web' && screenWidth >= 1024) && s.desktopHidden]} onPress={() => router.push('/create-group')}><Text style={s.createText}>＋  Új csoport</Text></Pressable></View><ScrollView style={s.scroll} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={() => void load()} tintColor={colors.orange} />}>{error ? <Text style={s.error}>{error}</Text> : null}{groups.map(group => <View key={group.id} style={{ width: groupWidth }}><GroupCard group={group} userId={session?.user.id || ''} onJoin={() => void toggle(group)} onOpen={() => router.push({ pathname: '/group/[id]', params: { id: group.id } })} onDelete={() => deleteGroup(group)} onProfile={() => router.push({ pathname: '/profile/[id]', params: { id: group.owner_id } })} /></View>)}{!loading && groups.length === 0 && <View style={s.empty}><Text style={s.star}>✳</Text><Text style={s.emptyTitle}>Indítsd el az első csoportot</Text><Text style={s.sub}>Hozz létre egy csoportot, és hívj meg más alkotókat.</Text><Pressable style={s.primary} onPress={() => router.push('/create-group')}><Text style={s.primaryText}>Csoport létrehozása ↗</Text></Pressable></View>}{loading && groups.length === 0 && <ActivityIndicator color={colors.orange} style={{ marginTop: 45 }} />}</ScrollView></SafeAreaView>;
+}
+const s = StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.paper }, desktopHidden: { display: 'none' }, header: { height: 61, backgroundColor: colors.paper, borderColor: colors.line, borderBottomWidth: 0, paddingHorizontal: 20, maxWidth: 1240, width: '100%', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, create: { backgroundColor: colors.orange, paddingHorizontal: 13, paddingVertical: 10, borderRadius: 13 }, createText: { color: colors.white, fontFamily: 'Poppins_700Bold', fontSize: 12 }, titleText: { flex: 1 }, title: { paddingHorizontal: 20, paddingTop: 21, paddingBottom: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', width: '100%', maxWidth: 1240, alignSelf: 'center' }, eyebrow: { color: colors.orange, fontFamily: 'Poppins_700Bold', fontSize: 10, letterSpacing: 1.6 }, heading: { color: colors.navy, fontFamily: 'Poppins_800ExtraBold', fontSize: 26, marginTop: 5, letterSpacing: -0.5 }, sub: { color: colors.muted, fontFamily: 'Poppins_400Regular', fontSize: 12, lineHeight: 17, marginTop: 4 }, scroll: { flex: 1 }, content: { paddingHorizontal: 20, paddingVertical: 9, gap: 14, paddingBottom: 24, flexDirection: 'row', flexWrap: 'wrap', width: '100%', maxWidth: 1240, alignSelf: 'center' }, empty: { alignItems: 'center', backgroundColor: colors.white, borderRadius: 20, borderWidth: 1, borderColor: colors.line, padding: 25, marginTop: 18, width: '100%' }, star: { color: colors.orange, fontSize: 28 }, emptyTitle: { color: colors.navy, fontFamily: 'Poppins_700Bold', fontSize: 15, marginTop: 8 }, primary: { backgroundColor: colors.navy, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, marginTop: 14 }, primaryText: { color: colors.white, fontFamily: 'Poppins_700Bold', fontSize: 12 }, error: { color: colors.danger, backgroundColor: '#FDE8E7', padding: 10, borderRadius: 8, fontSize: 12 } });

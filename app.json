@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "SkillSync",
+    "slug": "skillsync-mobile",
+    "scheme": "skillsync",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F5F7FB"
+    },
+    "ios": {
+      "bundleIdentifier": "app.skillsync.mobile",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "app.skillsync.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#1A365D",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A SkillSync csak az általad kiválasztott képet használja profil-, csoport- vagy projektképhez.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "752b677a-becc-46c7-8fc3-2cda323c228d"
+      }
+    }
+  }
+}

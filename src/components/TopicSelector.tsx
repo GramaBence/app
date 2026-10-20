@@ -1,0 +1,5 @@
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { categories, colors } from '../lib/theme';
+
+export function TopicSelector({ selected, onSelect }: { selected: string; onSelect: (v: string) => void }) { return <View style={s.wrap}><Text style={s.label}>TÉMA</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{categories.map(value => <Pressable key={value} style={[s.chip, selected === value && s.active]} onPress={() => onSelect(value)}><Text style={[s.text, selected === value && s.activeText]}>{value}</Text></Pressable>)}</ScrollView></View>; }
+const s = StyleSheet.create({ wrap: { marginTop: 17 }, label: { color: colors.navy, fontFamily: 'Poppins_700Bold', fontSize: 11, marginBottom: 8 }, row: { gap: 7 }, chip: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 18, borderWidth: 1, borderColor: colors.line, backgroundColor: colors.white }, active: { borderColor: colors.navy, backgroundColor: colors.navy }, text: { color: colors.muted, fontFamily: 'Poppins_500Medium', fontSize: 11 }, activeText: { color: colors.white } });
